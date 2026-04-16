@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Snake Orbit Slider (Fixed Tower Full Range)</title>
+
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: #060614; overflow-x: hidden; }
+
+.scene {
+  height: 800vh;
+  position: relative;
+}
+
+.sticky-view {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow: hidden;
+}
+
+.img-card {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  overflow: hidden;
+  will-change: transform, opacity, width, height;
+}
+.img-card img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* ✅ TOWER (unchanged as you had it) */
+.tower-wrap {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  transform: translateX(-50%);
+  pointer-events: none;
+  will-change: transform;
+  z-index: 0;
+}
+
+.tower-back {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  height: 200dvh;
+  z-index: 2;
+}
+
+.tower-front {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  height: 200dvh;
+  z-index: 20;
+}
+
+.scroll-hint {
+  position: absolute;
+  bottom: 28px;
+  left: 50%;
+  transform: translateX(-50%);
+  color: rgba(255,255,255,0.4);
+  font-size: 12px;
+  font-family: sans-serif;
+  letter-spacing: 0.12em;
+  z-index: 999;
+  transition: opacity 0.5s;
+}
+</style>
+</head>
+
+<body>
+
+<div class="scene" id="scene">
+  <div class="sticky-view">
+
+    <!-- CARDS (unchanged) -->
+    <div class="img-card" id="c0"><img src="images/1.webp"></div>
+    <div class="img-card" id="c1"><img src="images/2.webp"></div>
+    <div class="img-card" id="c2"><img src="images/3.webp"></div>
+    <div class="img-card" id="c3"><img src="images/4.webp"></div>
+    <div class="img-card" id="c4"><img src="images/5.webp"></div>
+    <div class="img-card" id="c5"><img src="images/6.webp"></div>
+    <div class="img-card" id="c6"><img src="images/work-1.webp"></div>
+    <div class="img-card" id="c7"><img src="images/work-2.webp"></div>
+
+    <!-- TOWER (unchanged) -->
+    <div class="tower-wrap" id="towerWrap">
+      <img src="images/eiffel-tower.png" class="tower-back">
+      <img src="images/eiffel-tower.png" class="tower-front">
+    </div>
+
+    <div class="scroll-hint" id="scrollHint">scroll down</div>
+
+  </div>
+</div>
+
+<script>
+const hint  = document.getElementById('scrollHint');
+
+/* ✅ FIX: now dynamic (future safe) */
+const cards = Array.from(document.querySelectorAll('.img-card'));
+const N     = cards.length;
+
+const tower = document.getElementById('towerWrap');
+
+const HERO_W = 700;
+const HERO_H = 450;
+
+function clamp(v, lo, hi) { return Math.min(Math.max(v, lo), hi); }
+
+function update() {
+
+  const activeFloat = clamp(window.scrollY / window.innerHeight, 0, N - 1);
+  hint.style.opacity = window.scrollY < 60 ? 1 : 0;
+
+  /* =========================
+     ✅ TOWER FIX (IMPORTANT)
+     ========================= */
+
+  const progress = clamp(
+    (window.scrollY / window.innerHeight) / (N - 1),
+    0,
+    1
+  );
+
+  const eased = 1 - Math.pow(1 - progress, 3);
+
+  /* ✅ FIX: no vh limit, full height based movement */
+  const towerHeight = tower.offsetHeight || window.innerHeight * 2;
+  const moveY = eased * (towerHeight * 0.55);
+
+  tower.style.transform =
+    `translateX(-50%) translateY(${-moveY}px) scale(${0.9 + eased * 0.1})`;
+
+  tower.style.opacity = (0.85 + eased * 0.15).toString();
+  tower.style.filter  = `blur(${(1 - eased) * 1.5}px)`;
+
+  /* =========================
+     CARDS (unchanged logic)
+     ========================= */
+
+  cards.forEach((card, i) => {
+
+    const offset = i - activeFloat;
+    const t      = clamp(offset / 4, -1, 1);
+    const curve  = Math.sin(t * Math.PI);
+
+    const dx      = curve * 40;
+    const dy      = t * 45;
+    const scale   = 1 - Math.abs(t) * 0.8;
+    const opacity = clamp(1 - Math.abs(t) * 1.2, 0, 1);
+    const ry      = curve * 25;
+    const depth   = 1 - Math.abs(t);
+
+    const vw = window.innerWidth  / 100;
+    const vh = window.innerHeight / 100;
+
+    card.style.width        = (HERO_W * scale) + 'px';
+    card.style.height       = (HERO_H * scale) + 'px';
+    card.style.opacity      = opacity;
+    card.style.borderRadius = (20 * scale) + 'px';
+    card.style.zIndex       = depth > 0.6 ? 25 : 3;
+
+    card.style.transform =
+      `translate(calc(-50% + ${dx * vw}px), calc(-50% + ${dy * vh}px))` +
+      ` perspective(1400px) rotateY(${ry}deg) translateZ(${depth * 200}px)`;
+
+    card.style.boxShadow =
+      `${curve * 30}px 40px 80px rgba(0,0,0,0.7)`;
+
+    card.style.filter =
+      `blur(${Math.abs(t) * 2}px)`;
+  });
+}
+
+window.addEventListener('scroll', update, { passive: true });
+update();
+</script>
+
+</body>
+</html>
